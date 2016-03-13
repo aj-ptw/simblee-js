@@ -96,7 +96,7 @@ var onDeviceDiscoveredCallback = function(peripheral) {
                             // remove non-printable and other non-valid JSON chars
                              dataPacket = dataPacket.replace(/[\u0000-\u0019]+/g,"");
                              dataPacket = dataPacket.replace(/\s+/g, '');
-                             console.log(dataPacket);
+                             //console.log(dataPacket);
                              try {
                                  dataObject = JSON.parse(dataPacket.trim());
                                  console.log(JSON.stringify(dataObject));
