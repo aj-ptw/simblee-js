@@ -9,9 +9,9 @@ var noble = require('noble'),
 
 var sampleCounter = 1;
 var connectedPeripheral;
-var dataArray1 = [];
-var dataArray2 = [];
-var whichArray;
+var dataPacket = "";
+var packetComplete = false;
+var dataObject;
 
 // TODO why does this need to be wrapped?
 var stop = function() {
@@ -81,7 +81,25 @@ var onDeviceDiscoveredCallback = function(peripheral) {
                 if (receiveCharacteristic) {
                     receiveCharacteristic.on('read', function(data, isNotification) {
                         // temperature service sends a float
-                         console.log(data.readFloatLE(0));
+                         //console.log(data.toString());
+                         dataPacket += data.toString();
+                         //console.log(dataPacket.indexOf('\n'));
+                         if(dataPacket.indexOf('\n')>-1){
+                             dataPacket = dataPacket.replace(/\\n/g, "\\n")
+                                .replace(/\\'/g, "\\'")
+                                .replace(/\\"/g, '\\"')
+                                .replace(/\\&/g, "\\&")
+                                .replace(/\\r/g, "\\r")
+                                .replace(/\\t/g, "\\t")
+                                .replace(/\\b/g, "\\b")
+                                .replace(/\\f/g, "\\f");
+                            // remove non-printable and other non-valid JSON chars
+                             dataPacket = dataPacket.replace(/[\u0000-\u0019]+/g,"");
+                             //console.log(dataPacket);
+                             dataObject = JSON.parse(dataPacket);
+                             console.log(JSON.stringify(dataObject));
+                             dataPacket = "";
+                         }
 
                     });
 
