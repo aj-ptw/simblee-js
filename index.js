@@ -4,7 +4,7 @@
 //
 // (c) 2014 Don Coleman
 var noble = require('noble'),
-    rfduino = require('./rfduino'),
+    rfduino = require('./simblee'),
     _ = require('underscore');
 
 var sampleCounter = 1;
@@ -70,6 +70,7 @@ var onDeviceDiscoveredCallback = function(peripheral) {
                 var receiveCharacteristic;
 
                 for (var i = 0; i < characteristics.length; i++) {
+                    //console.log(characteristics[i].uuid);
                     if (characteristics[i].uuid === rfduino.receiveCharacteristicUUID) {
                         receiveCharacteristic = characteristics[i];
                         console.log("Got receiveCharacteristicUUID: "+characteristics[i].uuid);
@@ -80,58 +81,7 @@ var onDeviceDiscoveredCallback = function(peripheral) {
                 if (receiveCharacteristic) {
                     receiveCharacteristic.on('read', function(data, isNotification) {
                         // temperature service sends a float
-                        var marker = data.readInt16LE(0);
-                        //console.log(marker);
-
-                        switch (marker) {
-                          case 11:
-                            //console.log("1-16: ")
-                            whichArray = 1;
-                            sampleCounter = 1;
-                            break;
-                          case 12:
-                            //console.log("17-32: ")
-                            whichArray = 2;
-                            sampleCounter = 1
-                            break;
-                          case 99:
-                            //console.log("READING COMPLETE")
-                            console.log(dataArray1.toString());
-                            console.log(dataArray2.toString());
-                            sampleCounter = 1;
-                            break;
-                          default:
-                            // if(sampleCounter == 5){
-                            //     console.log(sampleCounter+": "+data.readFloatLE(0).toFixed(2) + " PSI");
-                            // }
-                            switch (whichArray) {
-                              case 1:
-                                //console.log(sampleCounter);
-                                if(sampleCounter<=16){
-                                  dataArray1[sampleCounter-1]=data.readFloatLE(0).toFixed(2);
-                                }
-                                //console.log(sampleCounter+": "+data.readFloatLE(0).toFixed(2) + " PSI");
-
-                                break;
-                              case 2:
-                                //console.log(sampleCounter+": "+data.readFloatLE(0).toFixed(2) + " PSI");
-                                if(sampleCounter<=16){
-                                  dataArray2[sampleCounter-1]=data.readFloatLE(0).toFixed(2);
-                                }
-                                break;
-                              default:
-
-                            }
-                            sampleCounter++;
-
-                            //console.log(sampleCounter+": "+data.readInt16LE(0));
-
-                            //
-                        }
-                        // if(data.readInt16LE(0) == 11){
-                        //   console.log("1-16: ")
-                        // }else if
-                        // console.log(data.readInt16LE(0));
+                         console.log(data.readFloatLE(0));
 
                     });
 
