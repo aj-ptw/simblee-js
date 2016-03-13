@@ -12,6 +12,10 @@ var connectedPeripheral;
 var dataPacket = "";
 var packetComplete = false;
 var dataObject;
+var _peripheral;
+    var _sendCharacteristic;
+    var _bleAvailable = false;
+    var manualDisconnect = false;
 
 // TODO why does this need to be wrapped?
 var stop = function() {
@@ -20,7 +24,7 @@ var stop = function() {
 
 noble.on('scanStart', function() {
     console.log('Scan started');
-    setTimeout(stop, 10000);
+    //setTimeout(stop, 60000);
 });
 
 noble.on('scanStop', function() {
@@ -28,26 +32,35 @@ noble.on('scanStop', function() {
 });
 
 var onDeviceDiscoveredCallback = function(peripheral) {
+    _peripheral = peripheral;
     console.log('\nDiscovered Peripherial ' + peripheral.uuid);
 
-    if (_.contains(peripheral.advertisement.serviceUuids, rfduino.serviceUUID)) {
+    if (_.contains(_peripheral.advertisement.serviceUuids, rfduino.serviceUUID)) {
         // here is where we can capture the advertisement data from the rfduino and check to make sure its ours
-        console.log('RFduino is advertising \'' + rfduino.getAdvertisedServiceName(peripheral) + '\' service.');
-        console.log("serviceUUID: "+peripheral.advertisement.serviceUuids);
+        console.log('RFduino is advertising \'' + rfduino.getAdvertisedServiceName(_peripheral) + '\' service.');
+        console.log("serviceUUID: "+_peripheral.advertisement.serviceUuids);
 
-        peripheral.on('connect', function() {
+        _peripheral.on('connect', function() {
             console.log("got connect event");
             peripheral.discoverServices();
-            connectedPeripheral = peripheral;
+            noble.stopScanning();
+            //connectedPeripheral = peripheral;
         });
 
-        peripheral.on('disconnect', function() {
-            console.log('Disconnected');
-            connectedPeripheral = null;
-            noble.startScanning([rfduino.serviceUUID], false);
+        _peripheral.on('disconnect', function() {
+          noble.removeListener('discover',onDeviceDiscoveredCallback);
+          _peripheral.removeAllListeners('servicesDiscover');
+          _peripheral.removeAllListeners('connect');
+          _peripheral.removeAllListeners('disconnect');
+          //_peripheral = null;
+          console.log('Disconnected');
+          if(!manualDisconnect){
+            autoReconnect();
+          }
+
         });
 
-        peripheral.on('servicesDiscover', function(services) {
+        _peripheral.on('servicesDiscover', function(services) {
 
             var rfduinoService;
 
@@ -70,13 +83,16 @@ var onDeviceDiscoveredCallback = function(peripheral) {
                 var receiveCharacteristic;
 
                 for (var i = 0; i < characteristics.length; i++) {
-                    //console.log(characteristics[i].uuid);
                     if (characteristics[i].uuid === rfduino.receiveCharacteristicUUID) {
                         receiveCharacteristic = characteristics[i];
-                        console.log("Got receiveCharacteristicUUID: "+characteristics[i].uuid);
+                        break;
+                    }
+                    if (characteristics[i].uuid === rfduino.sendCharacteristicUUID) {
+                        _sendCharacteristic = characteristics[i];
                         break;
                     }
                 }
+
 
                 if (receiveCharacteristic) {
                     receiveCharacteristic.on('read', function(data, isNotification) {
@@ -118,7 +134,7 @@ var onDeviceDiscoveredCallback = function(peripheral) {
 
         });
         console.log("Calling connect");
-        peripheral.connect();
+        _peripheral.connect();
 
     }
 };
@@ -135,13 +151,22 @@ function exitHandler(options, err) {
     if (options.cleanup){
       console.log('clean');
       //console.log(connectedPeripheral);
-      if(connectedPeripheral){
-        noble.disconnect(connectedPeripheral.uuid);
-      }
+      _peripheral.disconnect();
+    //   if(connectedPeripheral){
+    //     noble.disconnect(connectedPeripheral.uuid);
+    //   }
       //connectedPeripheral.disconnect();
     }
     if (err) console.log(err.stack);
     if (options.exit) process.exit();
+}
+var autoReconnect = function(){
+  if(_bleAvailable || noble.state === "poweredOn"){
+    noble.on('discover', onDeviceDiscoveredCallback);
+    noble.startScanning([rfduino.serviceUUID], false);
+  }else{
+    this.warn("BLE not AVAILABLE");
+  }
 }
 
 //do something when app is closing
