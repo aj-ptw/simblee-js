@@ -5,9 +5,10 @@
   "main": "index.js",
   "dependencies": {
     "noble": "",
-	"underscore": ""
+    "underscore": "",
+    "trim": "0.0.1"
   },
   "engines": {
-     "node": ">=0.10.22"
-   }
+    "node": ">=0.10.22"
+  }
 }
