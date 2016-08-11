@@ -7,7 +7,6 @@ const udpRxPort = 10996;
 const udpTxPort = 10997;
 
 var udpRxOpen = false;
-var udpTxOpen = false;
 
 const UDP_CMD_CONNECT     = "c";
 const UDP_CMD_COMMAND     = "k";
@@ -50,67 +49,49 @@ var parseMessage = function(msg) {
   var char = String.fromCharCode(msg[0]);
   switch (char) {
     case UDP_CMD_CONNECT:
-      if (udpTxOpen) {
-        var buf = new Buffer(`${UDP_CMD_CONNECT},200${UDP_STOP}`);
-        udpTx.send(buf,udpTxPort);
-      }
+      var buf = new Buffer(`${UDP_CMD_CONNECT},200${UDP_STOP}`);
+      udpTx.send(buf,udpTxPort);
       connected = true;
       break;
     case UDP_CMD_COMMAND:
       if (connected) {
-        if (udpTxOpen) {
-          var buf = new Buffer(`${UDP_CMD_COMMAND},200${UDP_STOP}`);
-          udpTx.send(buf,udpTxPort);
-        }
+        var buf = new Buffer(`${UDP_CMD_COMMAND},200${UDP_STOP}`);
+        udpTx.send(buf,udpTxPort);
       } else {
         error400();
       }
       break;
     case UDP_CMD_DISCONNECT:
       if (connected) {
-        if (udpTxOpen) {
-          var buf = new Buffer(`${UDP_CMD_DISCONNECT},200${UDP_STOP}`);
-          udpTx.send(buf,udpTxPort);
-        }
+        var buf = new Buffer(`${UDP_CMD_DISCONNECT},200${UDP_STOP}`);
+        udpTx.send(buf,udpTxPort);
         connected = false;
       } else {
         error400();
       }
       break;
     case UDP_CMD_SCAN:
-      console.log(`scan`);
-      if (udpTxOpen) {
-        var buf = new Buffer(`${UDP_CMD_SCAN},200,ganglion-1234${UDP_STOP}`);
-        udpTx.send(buf,udpTxPort);
-      }
+      var buf = new Buffer(`${UDP_CMD_SCAN},200,ganglion-1234${UDP_STOP}`);
+      udpTx.send(buf,udpTxPort);
       break;
     case UDP_CMD_STATUS:
       if (connected) {
-        if (udpTxOpen) {
-          var buf = new Buffer(`${UDP_CMD_STATUS},200,true${UDP_STOP}`);
-          udpTx.send(buf,udpTxPort);
-        }
+        var buf = new Buffer(`${UDP_CMD_STATUS},200,true${UDP_STOP}`);
+        udpTx.send(buf,udpTxPort);
       } else {
-        if (udpTxOpen) {
-          var buf = new Buffer(`${UDP_CMD_STATUS},200,false${UDP_STOP}`);
-          udpTx.send(buf,udpTxPort);
-        }
+        var buf = new Buffer(`${UDP_CMD_STATUS},200,false${UDP_STOP}`);
+        udpTx.send(buf,udpTxPort);
       }
       break;
     case UDP_CMD_ERROR:
     default:
-    console.log(`default error`);
-      if (udpTxOpen) {
-        var buf = new Buffer(`${UDP_CMD_ERROR},500,Error: command not recognized${UDP_STOP}`);
-        udpTx.send(buf,udpTxPort);
-      }
+      var buf = new Buffer(`${UDP_CMD_ERROR},500,Error: command not recognized${UDP_STOP}`);
+      udpTx.send(buf,udpTxPort);
       break;
   }
 }
 
 function error400() {
-  if (udpTxOpen) {
-    var buf = new Buffer(`${UDP_CMD_ERROR},400,Error: No open BLE device${UDP_STOP}`);
-    udpTx.send(buf,udpTxPort);
-  }
+  var buf = new Buffer(`${UDP_CMD_ERROR},400,Error: No open BLE device${UDP_STOP}`);
+  udpTx.send(buf,udpTxPort);
 }
