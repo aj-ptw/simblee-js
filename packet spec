@@ -1,0 +1,51 @@
+/*
+
+  0xA0 0 0000 0000 0000 0000 0000000 0xC0
+  0xA0 N 0000 0000 0000 0000 000XXXX 0xC0
+	raw packet: 20 bytes all day
+		pref	cnt	chan1		chan2		chan3		chan4		aux				suff
+		0x00	00	000000	000000	000000	000000	0000000000	00
+
+	compressed packet: 20 bytes all day
+		pref	cnt	-ch1	-ch2	-ch3	-ch4	ch1		ch2		ch3		ch4		aux		suff
+		0x00	00	0000	0000	0000	0000	0000	0000	0000	0000	00		00
+
+	compressed data buffer: 16 bytes all day
+		-ch1	-ch2	-ch3	-ch4	+ch1	+ch2	+ch3	+ch4
+		0000	0000	0000	0000	0000	0000	0000	0000
+
+		256								128
+	0	Start Sample (send uncompressed raw data)
+	1	Sample	compress
+	2	Sample	compress & send differences
+	3	Sample	compress
+	4	Sample	compress & send differences
+	  ... etc ...
+	253 Sample compress
+	254 Sample compress & send differences
+	255 ! skip 255, go directly to zero !
+	0	Start Sample (send uncompressed raw data)
+		....
+
+
+
+
+	32bit Board data Packet: 33 bytes all day (plus hidden packet counter)
+		pref	cnt	chan1		chan2		chan3		chan4		chan5		chan6		chan7		chan8		aux					suff
+		0xA0	00	000000	000000	000000	000000	000000	000000	000000	000000	0000000000	C0
+
+
+	try to cram this into a 20 byte packet
+		1 prefix
+		1 sample counter
+
+		17 data bytes (div 16 = 1.0625!)
+
+		1 suffix
+
+	if it's possible to send a delta of only 8 bits (!) then we have something!!
+
+
+
+
+*/
