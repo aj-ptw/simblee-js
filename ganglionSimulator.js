@@ -16,7 +16,7 @@ const UDP_CMD_ERROR = "e";
 const UDP_CMD_SCAN = "s";
 const UDP_CMD_STATUS = "q";
 const UDP_DATA = "t";
-const UDP_STOP = ";\n";
+const UDP_STOP = ",;\n";
 
 let udpRxOpen = false;
 let connected = false;
@@ -51,8 +51,10 @@ udpRx.bind(udpRxPort);
 ///////////////////////////////////////////////////////////////
 
 var parseMessage = function(msg) {
-  var char = String.fromCharCode(msg[0]);
-  switch (char) {
+  let msgElements = msg.toString().split(',');
+  // var char = String.fromCharCode(msg[0]);
+  // console.log('msgElements[0]',msgElements[0],char);
+  switch (msgElements[0]) {
     case UDP_CMD_CONNECT:
       var buf = new Buffer(`${UDP_CMD_CONNECT},200${UDP_STOP}`);
       udpTx.send(buf,udpTxPort);
@@ -60,7 +62,7 @@ var parseMessage = function(msg) {
       break;
     case UDP_CMD_COMMAND:
       if (connected) {
-        parseCommand(String.fromCharCode(msg[1]));
+        parseCommand(msgElements[1]);
       } else {
         error400();
       }
@@ -96,12 +98,15 @@ var parseMessage = function(msg) {
 }
 
 var parseCommand = cmd => {
+  console.log(cmd);
   switch (cmd) {
     case GANGLION_CMD_STREAM_START:
+      console.log('start stream');
       if (!stream) startStream(); // Starts the stream
       streaming = true;
       break;
     case GANGLION_CMD_STREAM_STOP:
+      console.log('stop stream');
       if (stream) clearInterval(stream); // Stops the stream
       streaming = false;
       break;
@@ -114,8 +119,8 @@ var parseCommand = cmd => {
 
 var startStream = () => {
     const intervalInMS = 1000 / ganglionSampleRate;
-    const bufPre = new Buffer(`${UDP_DATA},`);
-    const bufPost = new Buffer(`,${UDP_STOP}`);
+    const bufPre = new Buffer(`${UDP_DATA},200,`);
+    const bufPost = new Buffer(`${UDP_STOP}`);
     let sampleNumber = 0;
 
     var getSample = sampleNumber => {
