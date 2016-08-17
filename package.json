@@ -4,9 +4,10 @@
   "description": "Library for RFduino.",
   "main": "index.js",
   "dependencies": {
+    "gaussian": "^1.1.0",
     "noble": "",
-    "underscore": "",
-    "trim": "0.0.1"
+    "trim": "0.0.1",
+    "underscore": ""
   },
   "engines": {
     "node": ">=0.10.22"
