@@ -127,8 +127,7 @@ var startStream = () => {
 
     var getSample = sampleNumber => {
       let arr =  getArrayFromSample(sampleGenerator(sampleNumber));
-
-      return new Buffer([sampleNumber, ',', arr[0], ',', arr[1], ',', arr[2], ',', arr[3]]);
+      return new Buffer(`${sampleNumber},${arr[0].toString()},${arr[1].toString()},${arr[2].toString()},${arr[3].toString()}`);
     };
 
     stream = setInterval(() => {
@@ -144,8 +143,9 @@ var startStream = () => {
 function floatToInt(n) {
     const MCP3912_Vref = 1.2;
     const MCP3912_Gain = 1.0;
+    const scale_fac_uVolts_per_count = (MCP3912_Vref * 1000000) / (8388607.0 * MCP3912_Gain * 1.5 * 51.0); //MCP3912 datasheet page 34. Gain of InAmp = 80
 
-    return Math.floor(n / ( MCP3912_Vref / MCP3912_Gain / (Math.pow(2,23) - 1))); // Truncate counts number
+    return Math.floor(n * scale_fac_uVolts_per_count); // Truncate counts number
 }
 
 /**
@@ -155,10 +155,13 @@ function floatToInt(n) {
  */
 function getArrayFromSample(sample) {
     var array = [];
+    const distribution = gaussian(0,1);
 
     // channel data
     for (var i = 0; i < 4; i++) {
-        array.append(floatToInt(sample.channelData[i]));
+        let whiteNoise = Math.abs(distribution.ppf(Math.random()) * Math.sqrt(256/2) * 1000);
+
+        array.push(Math.floor(whiteNoise));
     }
 
     return array;
