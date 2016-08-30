@@ -41,7 +41,7 @@ paths:
         401:
           description: Unable to disconnect from device, try again later.
   /k:
-    post:
+    put:
       description: Send a command to an open BLE device
       parameters:
         - name: command
@@ -88,3 +88,11 @@ paths:
           description: Good data packet
         500:
           description: Bad data packet
+  /l:
+    post:
+      description: Log message from the node
+      parameters:
+        - name: msg
+          in: query
+          description: The plain test log message
+          type: string

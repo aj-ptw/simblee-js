@@ -14,6 +14,7 @@ const UDP_CMD_CONNECT = "c";
 const UDP_CMD_COMMAND = "k";
 const UDP_CMD_DISCONNECT  = "d";
 const UDP_CMD_ERROR = "e";
+const UDP_CMD_LOG = "l";
 const UDP_CMD_SCAN = "s";
 const UDP_CMD_STATUS = "q";
 const UDP_DATA = "t";
@@ -78,7 +79,7 @@ var parseMessage = function(msg) {
       }
       break;
     case UDP_CMD_SCAN:
-      var buf = new Buffer(`${UDP_CMD_SCAN},200,ganglion-1234,bose-qc-headphones${UDP_STOP}`);
+      var buf = new Buffer(`${UDP_CMD_SCAN},200,ganglion-1234,bose-qc-headphones,ganglion-5678,ganglion-9678,${UDP_STOP}`);
       udpTx.send(buf,udpTxPort);
       break;
     case UDP_CMD_STATUS:
@@ -96,6 +97,8 @@ var parseMessage = function(msg) {
       udpTx.send(buf,udpTxPort);
       break;
   }
+  let buff = new Buffer(`${UDP_CMD_LOG},tacos${UDP_STOP}`);
+  udpTx.send(buff,udpTxPort);
 }
 
 var parseCommand = cmd => {
@@ -103,7 +106,7 @@ var parseCommand = cmd => {
   switch (cmd) {
     case GANGLION_CMD_STREAM_START:
       console.log('start stream');
-      if (!stream) startStream(); // Starts the stream
+      startStream(); // Starts the stream
       streaming = true;
       break;
     case GANGLION_CMD_STREAM_STOP:
