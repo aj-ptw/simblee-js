@@ -1,107 +1,132 @@
-const dgram = require('dgram');
+// const dgram = require('dgram');
 const gaussian = require('gaussian');
 
-const udpRx = dgram.createSocket('udp4');
-const udpTx = dgram.createSocket('udp4');
+// const udpRx = dgram.createSocket('udp4');
+// const udpTx = dgram.createSocket('udp4');
 
 const ganglionSampleRate = 256;
-const udpRxPort = 10996;
-const udpTxPort = 10997;
+const tcpHost = "127.0.0.1";
+const tcpPort = 10996;
 
 const GANGLION_CMD_STREAM_START = "b";
 const GANGLION_CMD_STREAM_STOP = "s";
-const UDP_CMD_CONNECT = "c";
-const UDP_CMD_COMMAND = "k";
-const UDP_CMD_DISCONNECT  = "d";
-const UDP_CMD_ERROR = "e";
-const UDP_CMD_LOG = "l";
-const UDP_CMD_SCAN = "s";
-const UDP_CMD_STATUS = "q";
+const TCP_CMD_CONNECT = "c";
+const TCP_CMD_COMMAND = "k";
+const TCP_CMD_DISCONNECT  = "d";
+const TCP_CMD_ERROR = "e";
+const TCP_CMD_LOG = "l";
+const TCP_CMD_SCAN = "s";
+const TCP_CMD_STATUS = "q";
 const UDP_DATA = "t";
 const UDP_STOP = ",;\n";
 
-let udpRxOpen = false;
+let tcpOpen = false;
 let connected = false;
 let stream;
 let streaming = false;
 
 ///////////////////////////////////////////////////////////////
-// UDP Rx "Server"                                           //
+// TCP "Server"                                              //
 ///////////////////////////////////////////////////////////////
 
-udpRx.on('error', (err) => {
-  console.log(`server error:\n${err.stack}`);
-  udpRx.close();
-  udpRxOpen = false;
+// Load the TCP Library
+net = require('net');
+
+// Keep track of the chat clients
+var clients = [];
+
+// Start a TCP Server
+net.createServer((socket) => {
+
+  // Identify this client
+  socket.name = socket.remoteAddress + ":" + socket.remotePort
+
+  // Put this new client in the list
+  clients.push(socket);
+
+  // Print debug message
+  // console.log("Welcome " + socket.name + "\n");
+
+  // Handle incoming messages from clients.
+  socket.on('data', data => {
+    console.log(`server got: ${data} from ${socket.name}`);
+    parseMessage(data, socket);
+  });
+
+  // Remove the client from the list when it leaves
+  socket.on('end', () => {
+    clients.splice(clients.indexOf(socket), 1);
+    console.log(socket.name + " left.\n");
+    if (streaming) {
+      // No more clients :/ might as well stop streaming, if that's what your into.
+      if (clients.length == 0) {
+        if (stream) clearInterval(stream); // Stops the stream
+        streaming = false;
+      }
+    }
+  });
+}).listen({
+  port: tcpPort,
+  host: tcpHost
 });
 
-udpRx.on('message', (msg, rinfo) => {
-  console.log(`udpRx got: ${msg} from ${rinfo.address}:${rinfo.port}`);
-  parseMessage(msg);
-});
+console.log(`server listenings on port ${tcpHost}:${tcpPort}`);
 
-udpRx.on('listening', () => {
-  var address = udpRx.address();
-  console.log(`udpRx listening ${address.address}:${address.port}`);
-  udpRxOpen = true;
-});
-
-udpRx.bind(udpRxPort);
+// Send a message to all clients
+var broadcast = (message, sender) => {
+  clients.forEach((client) => {
+    client.write(message);
+  });
+}
 
 ///////////////////////////////////////////////////////////////
 // UDP Tx "Server"                                           //
 ///////////////////////////////////////////////////////////////
 
-var parseMessage = function(msg) {
+var parseMessage = (msg, client) => {
   let msgElements = msg.toString().split(',');
   // var char = String.fromCharCode(msg[0]);
   // console.log('msgElements[0]',msgElements[0],char);
   switch (msgElements[0]) {
-    case UDP_CMD_CONNECT:
-      var buf = new Buffer(`${UDP_CMD_CONNECT},200${UDP_STOP}`);
-      udpTx.send(buf,udpTxPort);
+    case TCP_CMD_CONNECT:
+      client.write(`${TCP_CMD_CONNECT},200${UDP_STOP}`);
       connected = true;
       break;
-    case UDP_CMD_COMMAND:
+    case TCP_CMD_COMMAND:
       if (connected) {
-        parseCommand(msgElements[1]);
+        parseCommand(msgElements[1], client);
       } else {
         error400();
       }
       break;
-    case UDP_CMD_DISCONNECT:
+    case TCP_CMD_DISCONNECT:
       if (connected) {
-        var buf = new Buffer(`${UDP_CMD_DISCONNECT},200${UDP_STOP}`);
-        udpTx.send(buf,udpTxPort);
+        client.write(`${TCP_CMD_DISCONNECT},200${UDP_STOP}`);
         connected = false;
       } else {
         error400();
       }
       break;
-    case UDP_CMD_SCAN:
-      var buf = new Buffer(`${UDP_CMD_SCAN},200,ganglion-1234,bose-qc-headphones,ganglion-5678,ganglion-9678,${UDP_STOP}`);
-      udpTx.send(buf,udpTxPort);
+    case TCP_CMD_SCAN:
+      // console.log(`sending: ${TCP_CMD_SCAN},200,ganglion-1234,bose-qc-headphones,ganglion-5678,ganglion-9678${UDP_STOP}`);
+      client.write(`${TCP_CMD_SCAN},200,ganglion-1234,bose-qc-headphones,ganglion-5678,ganglion-9678${UDP_STOP}`);
       break;
-    case UDP_CMD_STATUS:
+    case TCP_CMD_STATUS:
       if (connected) {
-        var buf = new Buffer(`${UDP_CMD_STATUS},200,true${UDP_STOP}`);
-        udpTx.send(buf,udpTxPort);
+        client.write(`${TCP_CMD_STATUS},200,true${UDP_STOP}`);
       } else {
-        var buf = new Buffer(`${UDP_CMD_STATUS},200,false${UDP_STOP}`);
-        udpTx.send(buf,udpTxPort);
+        client.write(`${TCP_CMD_STATUS},200,false${UDP_STOP}`);
       }
       break;
-    case UDP_CMD_ERROR:
+    case TCP_CMD_ERROR:
     default:
-      var buf = new Buffer(`${UDP_CMD_ERROR},500,Error: command not recognized${UDP_STOP}`);
-      udpTx.send(buf,udpTxPort);
+      client.write(`${TCP_CMD_ERROR},500,Error: command not recognized${UDP_STOP}`);
       break;
   }
-  let buff = new Buffer(`${UDP_CMD_LOG},tacos${UDP_STOP}`);
-  udpTx.send(buff,udpTxPort);
+  // client.write(`${TCP_CMD_LOG},tacos${UDP_STOP}`);
 }
 
-var parseCommand = cmd => {
+var parseCommand = (cmd, client) => {
   console.log(cmd);
   switch (cmd) {
     case GANGLION_CMD_STREAM_START:
@@ -116,28 +141,28 @@ var parseCommand = cmd => {
       break;
     default:
       // Send message to tell driver command not recognized
-      udpTx.send(new Buffer(`${UDP_CMD_COMMAND},406${UDP_STOP}`), udpTxPort);
+      client.write(`${TCP_CMD_COMMAND},406${UDP_STOP}`);
+
       break;
   }
 }
 
 var startStream = () => {
     const intervalInMS = 1000 / ganglionSampleRate;
-    const bufPre = new Buffer(`${UDP_DATA},200,`);
-    const bufPost = new Buffer(`${UDP_STOP}`);
+    const strPre = `${UDP_DATA},200,`;
+    const strPost = `${UDP_STOP}`;
     let sampleNumber = 0;
     let sampleGenerator = randomSample(4, 256, true, true);
 
     var getSample = sampleNumber => {
       let arr =  getArrayFromSample(sampleGenerator(sampleNumber));
-      return new Buffer(`${sampleNumber},${arr[0].toString()},${arr[1].toString()},${arr[2].toString()},${arr[3].toString()}`);
+      return `${sampleNumber},${arr[0].toString()},${arr[1].toString()},${arr[2].toString()},${arr[3].toString()}`;
     };
 
     stream = setInterval(() => {
-        let bufSamp = getSample(sampleNumber);
-        let totalLength = bufPre.length + bufSamp.length + bufPost.length;
-        // Send the packet
-        udpTx.send(Buffer.concat([bufPre,bufSamp,bufPost],totalLength), udpTxPort);
+        let samp = getSample(sampleNumber);
+        // Send the packet to all clients
+        broadcast(`${strPre}${samp}${strPost}`);
         // Increment the sample number
         sampleNumber++;
     }, intervalInMS);
@@ -262,6 +287,6 @@ function newSample(sampleNumber) {
 }
 
 function error400() {
-  var buf = new Buffer(`${UDP_CMD_ERROR},400,Error: No open BLE device${UDP_STOP}`);
+  var buf = new Buffer(`${TCP_CMD_ERROR},400,Error: No open BLE device${UDP_STOP}`);
   udpTx.send(buf,udpTxPort);
 }
