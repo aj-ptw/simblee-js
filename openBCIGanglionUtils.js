@@ -10,7 +10,7 @@ module.exports = {
         return new Promise((resolve, reject) => {
             var list = []
             _.each(pArray, perif => {
-                list.push(perif.localName);
+                list.push(perif.advertisement.localName);
             });
             if (list.length > 0) {
                 return resolve(list);
@@ -27,13 +27,31 @@ module.exports = {
         return new Promise((resolve, reject) => {
             if (typeof(pArray) !== "object") return reject(`pArray must be of type Object`);
             _.each(pArray, perif => {
-                if (perif.hasOwnProperty("localName")) {
-                    if (perif.localName === localName) {
+                if (perif.advertisement.hasOwnProperty("localName")) {
+                    if (perif.advertisement.localName === localName) {
                         return resolve(perif);
                     }
                 }
             });
             return reject(`No peripheral found with localName: ${localName}`);
         });
+    },
+    /**
+     * @description Very safely checks to see if the noble peripheral is a
+     *  ganglion by way of checking the local name property.
+     */
+    isPeripheralGanglion: (peripheral) => {
+        if (peripheral) {
+            if (peripheral.hasOwnProperty("advertisement")) {
+                if (peripheral.advertisement !== null && peripheral.advertisement.hasOwnProperty("localName")) {
+                    if (typeof(peripheral.advertisement.localName) !== undefined) {
+                        if(peripheral.advertisement.localName.indexOf(k.GANGLION_PREFIX) > -1){
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

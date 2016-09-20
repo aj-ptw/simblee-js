@@ -18,11 +18,13 @@ var getListOfPeripheralsOfSize = (perifsToMake) => {
 
     for (var i = 0; i < perifsToMake; i++) {
         output.push({
-            localName: makeLocalName(i),
-            txPowerLevel: undefined,
-            manufacturerData: undefined,
-            serviceData: [],
-            serviceUuids: []
+            advertisement: {
+                localName: makeLocalName(i),
+                txPowerLevel: undefined,
+                manufacturerData: undefined,
+                serviceData: [],
+                serviceUuids: []
+            }
         })
     }
     return output;
@@ -73,6 +75,31 @@ describe('openBCIGanglionUtils',function() {
         it('should reject if pArray is not array local name is not in perif list', function(done) {
             let badName = makeLocalName(1); // Garuenteed to not be in the list
             utils.getPeripheralWithLocalName(badName).should.be.rejected.and.notify(done);
+        });
+    });
+    describe('#isPeripheralGanglion', function() {
+        it('should return true when proper localName', function() {
+            let list = getListOfPeripheralsOfSize(1);
+            let perif = list[0];
+            expect(utils.isPeripheralGanglion(perif)).to.be.true;
+        });
+        it('should return false when incorrect localName', function() {
+            let list = getListOfPeripheralsOfSize(1);
+            let perif = list[0];
+            perif.advertisement.localName = "burrito";
+            expect(utils.isPeripheralGanglion(perif)).to.be.false;
+        });
+        it('should return false when bad object', function() {
+            expect(utils.isPeripheralGanglion({})).to.be.false;
+        });
+        it('should return false if nothing input', function() {
+            expect(utils.isPeripheralGanglion()).to.be.false;
+        });
+        it('should return false when missing advertisement object', function() {
+            let list = getListOfPeripheralsOfSize(1);
+            let perif = list[0];
+            perif.advertisement = null;
+            expect(utils.isPeripheralGanglion(perif)).to.be.false;
         });
     });
 });

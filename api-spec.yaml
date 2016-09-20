@@ -14,6 +14,8 @@ paths:
       responses:
         200:
           description: List of ports
+        407:
+          description: No ports found
   /c:
     put:
       description: Open a BLE connection
@@ -30,6 +32,8 @@ paths:
           description: Unable to open connection to device
         405:
           description: Device not found
+        408:
+          description: Already connected to a device
   /d:
     delete:
       description: Close an open BLE connection
