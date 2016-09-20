@@ -36,6 +36,11 @@ var packetArray = new Array(127);
 var droppedPacketArray = new Array(127);
 var droppedPacketCounters = [];
 var udpOpen = false;
+var verbose = true;
+var peripheralArray = [];
+var previousPeripheralArray = [];
+var scanning = false;
+var scanningClient = null;
 
 const ganglionSampleRate = 256;
 const tcpHost = "127.0.0.1";
@@ -141,8 +146,16 @@ var parseMessage = (msg, client) => {
             }
             break;
         case k.TCP_CMD_SCAN:
-            // console.log(`sending: ${k.TCP_CMD_SCAN},200,ganglion-1234,bose-qc-headphones,ganglion-5678,ganglion-9678${k.TCP_STOP}`);
-            client.write(`${k.TCP_CMD_SCAN},200,ganglion-1234,bose-qc-headphones,ganglion-5678,ganglion-9678${k.TCP_STOP}`);
+            if (scanning) {
+                client.write(`${k.TCP_CMD_SCAN},${k.TCP_CODE_SCAN_ALREADY_SCANNING}${k.TCP_STOP}`);
+            } else {
+                if (peripheralArray.length > 0) {
+                    client.write(utils.getScanReponseFromPeriferals(peripheralArray));
+                }
+                previousPeripheralArray = peripheralArray;
+                peripheralArray = [];
+                noble.startScanning([], false);
+            }
             break;
         case k.TCP_CMD_STATUS:
             if (connected) {
@@ -200,32 +213,32 @@ var stop = function() {
     noble.stopScanning();
 };
 
-
-
 // Called after one second of scanning
-var scanFinalize = () => {
-    let output = `${k.TCP_CMD_SCAN}`;
-    utils.getPeripheralLocalNames(peripheralArray).then(list => {
-        output = `${output},${k.TCP_CODE_GOOD}`;
-        _.each(list, localName => {
-            output = `${output},${localName}`;
-        });
-        output = `${output}${k.TCP_STOP}`;
-        broadcast(output);
-    }).catch(err => {
-        this.warn(err);
-        output = `${output},${k.TCP_CODE_SCAN_NONE_FOUND}${k.TCP_STOP}`;
-        broadcast(output);
-    });
+var scanFinalize = (transmitOutput) => {
+    noble.stopScanning();
+    if (transmitOutput === undefined || transmitOutput === null) {
+        transmitOutput = true;
+    }
+    if(verbose) console.log(`Finalized scan`);
+    utils.getScanReponseFromPeriferals(peripheralArray).then(output => {
+        if(transmitOutput) broadcast(output);
+        console.log(`resolved: ${output}`);
+    }).catch(output => {
+        if(transmitOutput) broadcast(output);
+        console.log(`rejected: ${output}`);
+    })
 }
 
 noble.on('scanStart', function() {
     console.log('Scan started');
-
-    setTimeout(scanFinalize, k.BLE_SEARCH_TIME); // Finalize the scan after a second
+    scanning = true;
+    setTimeout(() => {
+        scanFinalize(true);
+    }, k.BLE_SEARCH_TIME); // Finalize the scan after a second
 });
 
 noble.on('scanStop', function() {
+    scanning = false;
     console.log('Scan stopped');
 });
 
@@ -328,16 +341,10 @@ var bleConnect = peripheral => {
     });
 };
 
-var peripheralArray = [];
-
 var onDeviceDiscoveredCallback = function(peripheral) {
-    // _peripheral = peripheral;
-    // console.log('\nDiscovered Peripherial ' + peripheral.uuid);
     console.log(peripheral.advertisement);
-    //if(typeof(rfduino.getAdvertisedServiceName(peripheral))!=="undefined"){
-    //console.log('Device is advertising \'' + peripheral.advertisement.localName + '\' service.');
-    //}
     if (utils.isPeripheralGanglion(peripheral)) {
+        if(verbose) console.log("Found ganglion!");
         peripheralArray.push(peripheral);
     }
 };
@@ -382,7 +389,7 @@ var autoReconnect = function() {
         peripheralArray = [];
         noble.on('discover', onDeviceDiscoveredCallback);
         noble.startScanning([], false); // Send empty array because we filter later
-        setTimeout(scanFinalize, k.BLE_SEARCH_TIME);
+
     } else {
         this.warn("BLE not AVAILABLE");
     }

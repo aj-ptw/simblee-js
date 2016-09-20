@@ -16,6 +16,8 @@ paths:
           description: List of ports
         407:
           description: No ports found
+        409:
+          description: Already scanning
   /c:
     put:
       description: Open a BLE connection

@@ -95,6 +95,12 @@ describe('openBCIGanglionUtils',function() {
         it('should return false if nothing input', function() {
             expect(utils.isPeripheralGanglion()).to.be.false;
         });
+        it('should return false if undfined unput input', function() {
+            let list = getListOfPeripheralsOfSize(1);
+            let perif = list[0];
+            perif.advertisement.localName = undefined;
+            expect(utils.isPeripheralGanglion(perif)).to.be.false;
+        });
         it('should return false when missing advertisement object', function() {
             let list = getListOfPeripheralsOfSize(1);
             let perif = list[0];
