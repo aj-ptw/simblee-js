@@ -1,0 +1,35 @@
+const GANGLION_CMD_STREAM_START = "b";
+const GANGLION_CMD_STREAM_TEST_START = "t";
+const GANGLION_CMD_STREAM_STOP = "s";
+const GANGLION_CMD_STREAM_TEST_STOP = "y";
+const GANGLION_PREFIX = "Ganglion";
+const TCP_CMD_CONNECT = "c";
+const TCP_CMD_COMMAND = "k";
+const TCP_CMD_DISCONNECT  = "d";
+const TCP_CMD_ERROR = "e";
+const TCP_CMD_LOG = "l";
+const TCP_CMD_SCAN = "s";
+const TCP_CMD_STATUS = "q";
+const TCP_DATA = "t";
+const TCP_STOP = ",;\n";
+const CODE_GOOD = 200;
+
+var constants = {
+    GANGLION_CMD_STREAM_START,
+    GANGLION_CMD_STREAM_TEST_START,
+    GANGLION_CMD_STREAM_STOP,
+    GANGLION_CMD_STREAM_TEST_STOP,
+    GANGLION_PREFIX,
+    TCP_CMD_CONNECT,
+    TCP_CMD_COMMAND,
+    TCP_CMD_DISCONNECT,
+    TCP_CMD_ERROR,
+    TCP_CMD_LOG,
+    TCP_CMD_SCAN,
+    TCP_CMD_STATUS,
+    TCP_DATA,
+    TCP_STOP,
+    CODE_GOOD
+}
+
+module.exports = constants;

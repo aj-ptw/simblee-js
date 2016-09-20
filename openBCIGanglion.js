@@ -42,6 +42,7 @@ const GANGLION_CMD_STREAM_START = "b";
 const GANGLION_CMD_STREAM_TEST_START = "t";
 const GANGLION_CMD_STREAM_STOP = "s";
 const GANGLION_CMD_STREAM_TEST_STOP = "y";
+const GANGLION_PREFIX = "Ganglion";
 const TCP_CMD_CONNECT = "c";
 const TCP_CMD_COMMAND = "k";
 const TCP_CMD_DISCONNECT  = "d";
@@ -204,26 +205,7 @@ var stop = function() {
     noble.stopScanning();
 };
 
-/**
- * @description Get a list of local names from an array of peripherals
- */
-var peripheralGetLocalNames = (pArray) => {
-    list = []
-    for (var p in pArray) {
-        if (p.hasOwnProperty("localName")) {
-            list.push(p.localName);
-        }
-    }
-    return list;
-}
 
-var peripheralGetWithLocalName = (localName) => {
-    for (var p in object) {
-        if (object.hasOwnProperty(p)) {
-
-        }
-    }
-}
 
 // Called after one second of scanning
 var scanFinalize = () => {

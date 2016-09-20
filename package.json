@@ -9,6 +9,13 @@
     "trim": "0.0.1",
     "underscore": ""
   },
+  "devDependencies": {
+    "chai": "^3.4.1",
+    "chai-as-promised": "^5.2.0",
+    "mocha": "^3.0.2",
+    "sinon": "^1.17.2",
+    "sinon-chai": "^2.8.0"
+  },
   "engines": {
     "node": ">=0.10.22"
   }
