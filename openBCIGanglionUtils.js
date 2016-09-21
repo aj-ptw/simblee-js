@@ -15,7 +15,7 @@ module.exports = {
             });
             return Promise.resovle(`${output}${k.TCP_STOP}`);
         }).catch(err => {
-            return Promise.reject(`${output},${k.TCP_CODE_SCAN_NONE_FOUND}${k.TCP_STOP}`);
+            return Promise.reject(`${output},${k.TCP_CODE_SCAN_NONE_FOUND},${err}${k.TCP_STOP}`);
         });
     },
     /**

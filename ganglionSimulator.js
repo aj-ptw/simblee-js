@@ -152,11 +152,12 @@ var startStream = () => {
     const strPre = `${UDP_DATA},200,`;
     const strPost = `${UDP_STOP}`;
     let sampleNumber = 0;
-    let sampleGenerator = randomSample(4, 256, true, true);
+    let sampleGenerator = randomSample(4, 200, true, true);
 
     var getSample = sampleNumber => {
       let arr =  getArrayFromSample(sampleGenerator(sampleNumber));
-      return `${sampleNumber},${arr[0].toString()},${arr[1].toString()},${arr[2].toString()},${arr[3].toString()}`;
+    //   console.log(`${sampleNumber},${arr[0].toString()},${arr[1].toString()},${arr[2].toString()},${arr[3].toString()}`);
+      return `${sampleNumber},${arr[0].toFixed(12).toString()},${arr[1].toFixed(12).toString()},${arr[2].toFixed(12).toString()},${arr[3].toFixed(12).toString()}`;
     };
 
     stream = setInterval(() => {
@@ -185,14 +186,18 @@ function getArrayFromSample(sample) {
     var array = [];
     const distribution = gaussian(0,1);
 
-    // channel data
-    for (var i = 0; i < 4; i++) {
-        let whiteNoise = Math.abs(distribution.ppf(Math.random()) * Math.sqrt(256/2) * 1000);
+    // console.log(sample.sampleNumber, sample.channelData);
 
-        array.push(Math.floor(whiteNoise));
-    }
+    return sample.channelData;
 
-    return array;
+    // // channel data
+    // for (var i = 0; i < 4; i++) {
+    //     let whiteNoise = Math.abs(distribution.ppf(Math.random()) * Math.sqrt(256/2) * 1000);
+    //
+    //     array.push(Math.floor(whiteNoise));
+    // }
+    //
+    // return array;
 }
 
 /**
