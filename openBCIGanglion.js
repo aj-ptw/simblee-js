@@ -35,7 +35,7 @@ var lastDroppedPacket;
 var packetArray = new Array(127);
 var droppedPacketArray = new Array(127);
 var droppedPacketCounters = [];
-var udpOpen = false;
+// var tcpOpen = false;
 var verbose = true;
 var peripheralArray = [];
 var previousPeripheralArray = [];
@@ -47,12 +47,11 @@ const tcpHost = "127.0.0.1";
 const tcpPort = 10996;
 
 // let udpRxOpen = false;
-let tcpOpen = false;
-// let connected = true;
+// let tcpOpen = false;
+
 let stream;
 let streaming = false;
-
-let connected = true;
+let connected = false;
 
 ///////////////////////////////////////////////////////////////
 // TCP "Server"                                              //
@@ -88,10 +87,10 @@ net.createServer((socket) => {
         console.log(socket.name + " left.\n");
         if (streaming) {
             // No more clients :/ might as well stop streaming, if that's what your into.
-            if (clients.length == 0) {
-                if (stream) clearInterval(stream); // Stops the stream
-                streaming = false;
-            }
+            // if (clients.length == 0) {
+            //     if (stream) clearInterval(stream); // Stops the stream
+            //     streaming = false;
+            // }
         }
     });
 }).listen({
@@ -103,7 +102,9 @@ console.log(`server listenings on port ${tcpHost}:${tcpPort}`);
 
 // Send a message to all clients
 var broadcast = (message, sender) => {
+
     clients.forEach((client) => {
+        // console.log(`client:`,client, `sending ${message}`);
         client.write(message);
     });
 }
@@ -115,12 +116,16 @@ var parseMessage = (msg, client) => {
     switch (msgElements[0]) {
         case k.TCP_CMD_CONNECT:
             if (connected) {
-                broadcast(`${k.TCP_CMD_CONNECT},${k.TCP_CODE_CONNECT_ALREADY_CONNECTED}${k.TCP_STOP}`);
+                console.log(`already connected`);
+                client.write(`${k.TCP_CMD_CONNECT},${k.TCP_CODE_CONNECT_ALREADY_CONNECTED}${k.TCP_STOP}`);
             } else {
-                utils.getPeripheralWithLocalName(msgElements[1]).then(perif => {
-                    bleConnect(perif);
+                console.log(`attempting to connect to ${msgElements[1]}`);
+                utils.getPeripheralWithLocalName(previousPeripheralArray, msgElements[1]).then(perif => {
+                    console.log(`found perif ${perif}`);
+                    bleConnect(perif, client);
                 }).catch(err => {
-                    broadcast(`${k.TCP_CMD_CONNECT},${k.TCP_CODE_CONNECT_DEVICE_NOT_FOUND}${k.TCP_STOP}`)
+                    console.log(`failed to find perif named ${msgElements[1]}`);
+                    client.write(`${k.TCP_CMD_CONNECT},${k.TCP_CODE_CONNECT_DEVICE_NOT_FOUND}${k.TCP_STOP}`)
                     connected = false;
                 });
             }
@@ -128,10 +133,13 @@ var parseMessage = (msg, client) => {
         case k.TCP_CMD_COMMAND:
             if (connected) {
                 parseCommand(msgElements[1], client);
-                if(_sendCharacteristic!== null){
+                if(_sendCharacteristic!== null) {
                     var out = new Buffer(msgElements[1]);
                     _sendCharacteristic.write(out);
                     console.log(`sending ${out} to Ganglion`);
+                    // console.log(`client count: ${clients.length}`);
+                } else {
+                    console.log(`sendCharacteristic not set`);
                 }
             } else {
                 error400();
@@ -150,7 +158,11 @@ var parseMessage = (msg, client) => {
                 client.write(`${k.TCP_CMD_SCAN},${k.TCP_CODE_SCAN_ALREADY_SCANNING}${k.TCP_STOP}`);
             } else {
                 if (peripheralArray.length > 0) {
-                    client.write(utils.getScanReponseFromPeriferals(peripheralArray));
+                    utils.getScanReponseFromPeriferals(peripheralArray).then(output => {
+                        client.write(output);
+                    }).catch(errMsg => {
+                        client.write(errMsg);
+                    });
                 }
                 previousPeripheralArray = peripheralArray;
                 peripheralArray = [];
@@ -174,15 +186,15 @@ var parseMessage = (msg, client) => {
 var parseCommand = (cmd, client) => {
     console.log(cmd);
     switch (cmd) {
-        case GANGLION_CMD_STREAM_START:
-        case GANGLION_CMD_STREAM_TEST_START:
+        case k.GANGLION_CMD_STREAM_START:
+        case k.GANGLION_CMD_STREAM_TEST_START:
             console.log('start stream');
             //      startStream(); // Starts the stream
             streaming = true;
             droppedPacketCounter = 0;
             break;
-        case GANGLION_CMD_STREAM_STOP:
-        case GANGLION_CMD_STREAM_TEST_STOP:
+        case k.GANGLION_CMD_STREAM_STOP:
+        case k.GANGLION_CMD_STREAM_TEST_STOP:
             console.log('stop stream');
             //      if (stream) clearInterval(stream); // Stops the stream
             streaming = false;
@@ -243,7 +255,7 @@ noble.on('scanStop', function() {
 });
 
 
-var bleConnect = peripheral => {
+var bleConnect = (peripheral, client) => {
     _peripheral = peripheral;
     // if (_.contains(_peripheral.advertisement.localName, rfduino.localNamePrefix)) {
     // TODO: slice first 8 of localName and see if that is ganglion
@@ -542,7 +554,7 @@ var processCompressedData = function(data) {
         //console.log(uncompressedPacket[0] + " " + uncompressedPacket[1] + " " + uncompressedPacket[2] + " " + uncompressedPacket[3] + " " + uncompressedPacket[4])
         var uncompressedPacketCSV = `${k.TCP_DATA},200,${uncompressedPacket[0]},${uncompressedPacket[1]},${uncompressedPacket[2]},${uncompressedPacket[3]},${uncompressedPacket[4]}${k.TCP_STOP}`;
         // console.log("zero packet " + uncompressedPacketCSV);
-        client.write(uncompressedPacketCSV);
+        broadcast(uncompressedPacketCSV);
         // var outBuff = new Buffer(uncompressedPacketCSV);
         // udpTx.send(outBuff,0,outBuff.length, udpTxPort);
         break;
@@ -579,12 +591,15 @@ var processCompressedData = function(data) {
                 //decompressedSamples[i][j] = decompressedSamples[i - 1][j] - receivedDeltas[i - 1][j];
             }
             packet += `${k.TCP_STOP}`;
-            if(udpOpen){
+            // console.log('packet', packet);
+            broadcast(packet);
+
+            // if(udpOpen){
                 //udpRx.send(packet,udpRxPort);
-                client.write(packet);
+                // broadcast(packet);
                 // var outBuff = new Buffer(packet);
                 // udpTx.send(outBuff,0,outBuff.length, udpTxPort);
-            }
+            // }
             // console.log(packet);
         }
         for(var i=0; i<4; i++){ // rotate the 0 position for next time

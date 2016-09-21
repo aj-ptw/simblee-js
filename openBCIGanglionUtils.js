@@ -13,7 +13,7 @@ module.exports = {
             _.each(list, localName => {
                 output = `${output},${localName}`;
             });
-            return Promise.resovle(`${output}${k.TCP_STOP}`);
+            return Promise.resolve(`${output}${k.TCP_STOP}`);
         }).catch(err => {
             return Promise.reject(`${output},${k.TCP_CODE_SCAN_NONE_FOUND},${err}${k.TCP_STOP}`);
         });
