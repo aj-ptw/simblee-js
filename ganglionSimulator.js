@@ -152,12 +152,12 @@ var startStream = () => {
     const strPre = `${UDP_DATA},200,`;
     const strPost = `${UDP_STOP}`;
     let sampleNumber = 0;
-    let sampleGenerator = randomSample(4, 200, true, true);
+    let sampleGenerator = randomSample(4, 200, true, `60Hz`);
 
     var getSample = sampleNumber => {
       let arr =  getArrayFromSample(sampleGenerator(sampleNumber));
     //   console.log(`${sampleNumber},${arr[0].toString()},${arr[1].toString()},${arr[2].toString()},${arr[3].toString()}`);
-      return `${sampleNumber},${arr[0].toFixed(12).toString()},${arr[1].toFixed(12).toString()},${arr[2].toFixed(12).toString()},${arr[3].toFixed(12).toString()}`;
+      return `${sampleNumber},${arr[0].toString()},${arr[1].toString()},${arr[2].toString()},${arr[3].toString()}`;
     };
 
     stream = setInterval(() => {
@@ -171,7 +171,7 @@ var startStream = () => {
 
 function floatToInt(n) {
     const MCP3912_Vref = 1.2;
-    const MCP3912_Gain = 1.0;
+    const MCP3912_Gain = 1.5 * 51.0;
     const scale_fac_uVolts_per_count = (MCP3912_Vref * 1000000) / (8388607.0 * MCP3912_Gain * 1.5 * 51.0); //MCP3912 datasheet page 34. Gain of InAmp = 80
 
     return Math.floor(n * scale_fac_uVolts_per_count); // Truncate counts number
@@ -188,16 +188,46 @@ function getArrayFromSample(sample) {
 
     // console.log(sample.sampleNumber, sample.channelData);
 
-    return sample.channelData;
+    // return sample.channelData;
 
-    // // channel data
-    // for (var i = 0; i < 4; i++) {
-    //     let whiteNoise = Math.abs(distribution.ppf(Math.random()) * Math.sqrt(256/2) * 1000);
-    //
-    //     array.push(Math.floor(whiteNoise));
-    // }
-    //
-    // return array;
+    // channel data
+    for (var i = 0; i < 4; i++) {
+        // let whiteNoise = Math.abs(distribution.ppf(Math.random()) * Math.sqrt(256/2) * 1000);
+
+        array.push(Math.floor(interpret24bitAsInt32(floatTo3ByteBuffer(sample.channelData[i]))));
+    }
+    // console.log(array);
+
+    return array;
+}
+
+function floatTo3ByteBuffer(float) {
+    const MCP3912_Vref = 1.2;
+    const MCP3912_Gain = 1.5 * 51.0;
+    var intBuf = new Buffer(3); // 3 bytes for 24 bits
+    intBuf.fill(0); // Fill the buffer with 0s
+
+    var temp = float / ( MCP3912_Vref / MCP3912_Gain / (Math.pow(2,23) - 1)); // Convert to counts
+
+    temp = Math.floor(temp); // Truncate counts number
+
+    // Move into buffer
+    intBuf[2] = temp & 255;
+    intBuf[1] = (temp & (255 << 8)) >> 8;
+    intBuf[0] = (temp & (255 << 16)) >> 16;
+
+    return intBuf;
+}
+
+function interpret24bitAsInt32(threeByteBuffer) {
+    var prefix = 0;
+
+    if(threeByteBuffer[0] > 127) {
+        //console.log('\t\tNegative number');
+        prefix = 255;
+    }
+
+    return (prefix << 24 ) | (threeByteBuffer[0] << 16) | (threeByteBuffer[1] << 8) | threeByteBuffer[2];
 }
 
 /**
