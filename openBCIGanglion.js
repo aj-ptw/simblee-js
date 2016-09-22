@@ -142,15 +142,19 @@ var parseMessage = (msg, client) => {
                     console.log(`sendCharacteristic not set`);
                 }
             } else {
-                error400();
+                error400(client);
             }
             break;
         case k.TCP_CMD_DISCONNECT:
             if (connected) {
-                client.write(`${k.TCP_CMD_DISCONNECT},200${k.TCP_STOP}`);
+                // Don't auto reconnect
+                manualDisconnect = true;
+                // Disconnect from the peripheral
+                if (_peripheral) _peripheral.disconnect();
                 connected = false;
+                client.write(`${k.TCP_CMD_DISCONNECT},200${k.TCP_STOP}`);
             } else {
-                error400();
+                error400(client);
             }
             break;
         case k.TCP_CMD_SCAN:
@@ -206,7 +210,7 @@ var parseCommand = (cmd, client) => {
     }
 }
 
-function error400() {
+function error400(client)() {
     client.write(`${k.TCP_CMD_ERROR},400,Error: No open BLE device${k.TCP_STOP}`);
 }
 
